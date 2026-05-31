@@ -1,0 +1,29 @@
+# Flutter
+flutter_app/build/
+flutter_app/.dart_tool/
+flutter_app/.packages
+flutter_app/.pub/
+flutter_app/.flutter-plugins*
+flutter_app/pubspec.lock
+
+# Node
+node_modules/
+agent-server/node_modules/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+flutter_app/build_verbose*.log
+
+# Env
+.env
+*.local

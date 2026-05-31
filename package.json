@@ -1,0 +1,53 @@
+{
+  "name": "mobicoder",
+  "version": "1.9.0",
+  "description": "MobiCoder - AI Coding Agent for Android",
+  "main": "lib/index.js",
+  "type": "module",
+  "bin": {
+    "mobicoder": "bin/mobicoder"
+  },
+  "scripts": {
+    "test": "node lib/test.js",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "postinstall": "node lib/postinstall.js"
+  },
+  "keywords": [
+    "mobicoder",
+    "ai",
+    "coding",
+    "agent",
+    "android",
+    "termux",
+    "vibecoding"
+  ],
+  "author": "Mithun Gowda B <mithungowda.b7411@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mithun50/mobicoder.git"
+  },
+  "homepage": "https://github.com/mithun50/mobicoder#readme",
+  "bugs": {
+    "url": "https://github.com/mithun50/mobicoder/issues"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "os": [
+    "android",
+    "linux"
+  ],
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "commander": "^12.1.0",
+    "inquirer": "^9.2.12",
+    "ora": "^7.0.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "eslint": "^9.17.0",
+    "globals": "^15.14.0"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "mobicoder-agent",
+  "version": "1.9.0",
+  "description": "MobiCoder AI Agent Server - mobile AI coding agent for Android",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "ws": "^8.18.0",
+    "openai": "^4.67.0",
+    "@anthropic-ai/sdk": "^0.32.0",
+    "cors": "^2.8.5"
+  },
+  "keywords": ["ai", "agent", "coding", "mobile", "mobicoder"],
+  "license": "MIT"
+}
