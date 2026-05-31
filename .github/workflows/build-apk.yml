@@ -24,6 +24,28 @@ jobs:
           flutter-version: '3.24.x'
           channel: 'stable'
 
+      - name: Fetch PRoot binaries
+        run: bash scripts/fetch-proot-binaries.sh
+
+      - name: Verify PRoot binaries
+        run: |
+          echo "Checking jniLibs contents..."
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+            for lib in libproot.so libprootloader.so; do
+              FILE="flutter_app/android/app/src/main/jniLibs/${abi}/${lib}"
+              if [ ! -f "$FILE" ]; then
+                echo "ERROR: Missing $FILE"
+                exit 1
+              fi
+              SIZE=$(stat -c%s "$FILE")
+              if [ "$SIZE" -lt 1000 ]; then
+                echo "WARN: $FILE looks suspicious (${SIZE} bytes)"
+              else
+                echo "OK: $FILE (${SIZE} bytes)"
+              fi
+            done
+          done
+
       - name: Install dependencies
         working-directory: flutter_app
         run: flutter pub get
