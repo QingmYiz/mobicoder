@@ -205,7 +205,7 @@ class _AgentScreenState extends State<AgentScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
-                      Icons.robot,
+                      Icons.android,
                       size: 64,
                       color: theme.colorScheme.onSurfaceVariant,
                     ),

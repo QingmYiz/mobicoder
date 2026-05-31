@@ -67,7 +67,7 @@ class DashboardScreen extends StatelessWidget {
             StatusCard(
               title: 'Agent Mode',
               subtitle: 'AI coding agent with file & terminal access',
-              icon: Icons.robot,
+              icon: Icons.android,
               trailing: const Icon(Icons.chevron_right),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const AgentScreen()),

@@ -23,6 +23,7 @@ Thumbs.db
 
 # Logs
 flutter_app/build_verbose*.log
+flutter_app/actions_runs.json
 
 # Env
 .env
