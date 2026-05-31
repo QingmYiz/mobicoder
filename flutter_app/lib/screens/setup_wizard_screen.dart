@@ -167,7 +167,7 @@ class _SetupWizardScreenState extends State<SetupWizardScreen> {
       (1, 'Download Ubuntu rootfs', SetupStep.downloadingRootfs),
       (2, 'Extract rootfs', SetupStep.extractingRootfs),
       (3, 'Install Node.js', SetupStep.installingNode),
-      (4, 'Install OpenClaw', SetupStep.installingOpenClaw),
+      (4, 'Install Agent', SetupStep.installingAgent),
       (5, 'Configure Bionic Bypass', SetupStep.configuringBypass),
     ];
 

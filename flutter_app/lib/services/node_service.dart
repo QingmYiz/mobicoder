@@ -63,8 +63,8 @@ class NodeService {
     final prefs = PreferencesService();
     await prefs.init();
 
-    final targetHost = host ?? prefs.nodeGatewayHost ?? AppConstants.gatewayHost;
-    final targetPort = port ?? prefs.nodeGatewayPort ?? AppConstants.gatewayPort;
+    final targetHost = host ?? prefs.nodeGatewayHost ?? AppConstants.agentHost;
+    final targetPort = port ?? prefs.nodeGatewayPort ?? AppConstants.agentPort;
 
     _updateState(_state.copyWith(
       status: NodeStatus.connecting,
