@@ -6,7 +6,10 @@ import '../app.dart';
 import '../constants.dart';
 
 class AgentScreen extends StatefulWidget {
-  const AgentScreen({super.key});
+  final String? projectName;
+  final String? workdir;
+
+  const AgentScreen({super.key, this.projectName, this.workdir});
 
   @override
   State<AgentScreen> createState() => _AgentScreenState();
@@ -65,7 +68,7 @@ class _AgentScreenState extends State<AgentScreen> {
               if (type == 'thinking') {
                 _messages.add(_AgentEvent(
                   type: AgentEventType.thinking,
-                  content: content ?? 'Thinking...',
+                  content: content ?? '思考中...',
                 ));
               } else if (type == 'action') {
                 _messages.add(_AgentEvent(
@@ -86,13 +89,13 @@ class _AgentScreenState extends State<AgentScreen> {
               } else if (type == 'done') {
                 _messages.add(_AgentEvent(
                   type: AgentEventType.done,
-                  content: result ?? content ?? 'Done',
+                  content: result ?? content ?? '已完成',
                 ));
                 _busy = false;
               } else if (type == 'error') {
                 _messages.add(_AgentEvent(
                   type: AgentEventType.error,
-                  content: error ?? content ?? 'Unknown error',
+                  content: error ?? content ?? '未知错误',
                 ));
                 _busy = false;
               }
@@ -102,7 +105,7 @@ class _AgentScreenState extends State<AgentScreen> {
         },
         onError: (e) {
           setState(() {
-            _error = 'Connection error: $e';
+            _error = '连接错误：$e';
             _connected = false;
             _busy = false;
           });
@@ -116,7 +119,7 @@ class _AgentScreenState extends State<AgentScreen> {
       );
     } catch (e) {
       setState(() {
-        _error = 'Failed to connect: $e';
+        _error = '连接失败：$e';
         _connected = false;
       });
     }
@@ -136,24 +139,39 @@ class _AgentScreenState extends State<AgentScreen> {
     _controller.clear();
     _scrollToBottom();
 
+    final contextItems = <Map<String, String>>[];
+    if ((widget.projectName?.isNotEmpty ?? false) ||
+        (widget.workdir?.isNotEmpty ?? false)) {
+      contextItems.add({
+        'role': 'system',
+        'content': '当前项目：${widget.projectName ?? ''}\n'
+            '当前工作目录：${widget.workdir ?? ''}\n'
+            '后续文件读写和命令执行默认围绕该项目目录进行。',
+      });
+    }
+
     _channel!.sink.add(jsonEncode({
       'type': 'task',
       'task': text,
+      if (contextItems.isNotEmpty) 'context': contextItems,
+      if (widget.projectName != null) 'projectName': widget.projectName,
+      if (widget.workdir != null) 'workdir': widget.workdir,
     }));
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final hasProjectContext = widget.projectName != null && widget.projectName!.isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Agent Mode'),
+        title: const Text('Agent 模式'),
         actions: [
           if (!_connected)
             TextButton(
               onPressed: _connect,
-              child: const Text('Connect'),
+              child: const Text('连接'),
             )
           else
             Container(
@@ -164,7 +182,7 @@ class _AgentScreenState extends State<AgentScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Text(
-                'Connected',
+                '已连接',
                 style: TextStyle(
                   color: AppColors.statusGreen,
                   fontSize: 12,
@@ -175,6 +193,26 @@ class _AgentScreenState extends State<AgentScreen> {
       ),
       body: Column(
         children: [
+          if (hasProjectContext)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              color: theme.colorScheme.primaryContainer.withAlpha(90),
+              child: Row(
+                children: [
+                  const Icon(Icons.folder_open, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '当前项目：${widget.projectName}  ·  工作目录：${widget.workdir ?? '/${widget.projectName}'}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           if (_error != null)
             Container(
               width: double.infinity,
@@ -193,7 +231,7 @@ class _AgentScreenState extends State<AgentScreen> {
                       setState(() => _error = null);
                       _connect();
                     },
-                    child: const Text('Retry'),
+                    child: const Text('重试'),
                   ),
                 ],
               ),
@@ -211,14 +249,18 @@ class _AgentScreenState extends State<AgentScreen> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'Agent Mode',
+                      'Agent 模式',
                       style: theme.textTheme.titleLarge,
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Connect to start an AI coding session.\n'
-                      'The agent can read/write files, execute commands,\n'
-                      'and build APKs autonomously.',
+                      hasProjectContext
+                          ? '连接后即可让 Agent 协助当前项目。\n'
+                              '它会默认围绕 ${widget.projectName} 读写文件、执行命令，\n'
+                              '并协助你完成构建与调试。'
+                          : '连接后即可开始 AI 编程会话。\n'
+                              'Agent 可以读取/修改文件、执行命令，\n'
+                              '并协助你完成构建与调试。',
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
@@ -228,7 +270,7 @@ class _AgentScreenState extends State<AgentScreen> {
                     FilledButton.icon(
                       onPressed: _connect,
                       icon: const Icon(Icons.power),
-                      label: const Text('Connect Agent'),
+                      label: const Text('连接 Agent'),
                     ),
                   ],
                 ),
@@ -262,7 +304,7 @@ class _AgentScreenState extends State<AgentScreen> {
                       controller: _controller,
                       enabled: !_busy,
                       decoration: const InputDecoration(
-                        hintText: 'Describe what to build...',
+                        hintText: '描述你想让 Agent 完成的任务...',
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.symmetric(horizontal: 12),
                       ),
@@ -381,7 +423,7 @@ class _AgentScreenState extends State<AgentScreen> {
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
-                'Tool: ${event.action}(${event.args ?? ''})',
+                '工具：${event.action}(${event.args ?? ''})',
                 style: const TextStyle(
                   fontFamily: 'monospace',
                   fontSize: 12,
@@ -422,19 +464,19 @@ class _AgentEvent {
   String get typeLabel {
     switch (type) {
       case AgentEventType.user:
-        return 'You';
+        return '你';
       case AgentEventType.thinking:
-        return 'Thinking';
+        return '思考中';
       case AgentEventType.action:
-        return 'Action: $action';
+        return '执行动作：$action';
       case AgentEventType.observation:
-        return 'Observation';
+        return '执行结果';
       case AgentEventType.message:
         return 'MobiCoder';
       case AgentEventType.done:
-        return 'Complete';
+        return '已完成';
       case AgentEventType.error:
-        return 'Error';
+        return '错误';
     }
   }
 }

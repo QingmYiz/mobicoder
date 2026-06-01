@@ -1,5 +1,5 @@
-import OpenAI from 'openai';
 import { loadConfig } from './config.js';
+import { createChatCompletion, streamChatCompletion } from './newapi.js';
 
 /**
  * POST /api/chat
@@ -31,14 +31,7 @@ export async function handleChat(req, res) {
       'X-Accel-Buffering': 'no',
     });
 
-    if (provider.type === 'openai' || provider.baseUrl?.includes('openai')) {
-      await streamOpenAI(res, provider, model, messages);
-    } else if (provider.type === 'anthropic') {
-      await streamAnthropic(res, provider, model, messages);
-    } else {
-      // Generic OpenAI-compatible
-      await streamOpenAI(res, provider, model, messages);
-    }
+    await streamOpenAICompatible(res, provider, model, messages);
 
     res.write('data: [DONE]\n\n');
     res.end();
@@ -51,52 +44,37 @@ export async function handleChat(req, res) {
   }
 }
 
-async function streamOpenAI(res, provider, model, messages) {
-  const client = new OpenAI({
+async function streamOpenAICompatible(res, provider, model, messages) {
+  await streamChatCompletion({
     apiKey: provider.apiKey,
-    baseURL: provider.baseUrl || 'https://api.openai.com/v1',
-  });
-
-  const stream = await client.chat.completions.create({
+    baseUrl: provider.baseUrl,
     model,
-    messages: messages.map(m => ({ role: m.role, content: m.content })),
-    stream: true,
-  });
-
-  for await (const chunk of stream) {
-    const delta = chunk.choices?.[0]?.delta?.content;
-    if (delta) {
+    messages,
+    temperature: provider.temperature,
+    topP: provider.topP,
+    maxTokens: provider.maxTokens,
+    maxCompletionTokens: provider.maxCompletionTokens,
+    reasoningEffort: provider.reasoningEffort,
+    onDelta: (delta) => {
       res.write(`data: ${JSON.stringify({ delta })}\n\n`);
-    }
-    if (chunk.choices?.[0]?.finish_reason) {
-      res.write(`data: ${JSON.stringify({ done: true, finish_reason: chunk.choices[0].finish_reason })}\n\n`);
-    }
-  }
+    },
+    onDone: (event) => {
+      if (event?.finish_reason) {
+        res.write(`data: ${JSON.stringify({ done: true, finish_reason: event.finish_reason })}\n\n`);
+      }
+    },
+  });
 }
 
-async function streamAnthropic(res, provider, model, messages) {
-  // Use OpenAI-compatible endpoint if available, otherwise use Anthropic SDK
-  // Most providers expose OpenAI-compatible API nowadays
-  const client = new OpenAI({
+export async function createChatCompletionOnce({ provider, model, messages, ...options }) {
+  return createChatCompletion({
     apiKey: provider.apiKey,
-    baseURL: provider.baseUrl || 'https://api.anthropic.com/v1',
-  });
-
-  const stream = await client.chat.completions.create({
+    baseUrl: provider.baseUrl,
     model,
-    messages: messages.map(m => ({ role: m.role, content: m.content })),
-    stream: true,
+    messages,
+    stream: false,
+    ...options,
   });
-
-  for await (const chunk of stream) {
-    const delta = chunk.choices?.[0]?.delta?.content;
-    if (delta) {
-      res.write(`data: ${JSON.stringify({ delta })}\n\n`);
-    }
-    if (chunk.choices?.[0]?.finish_reason) {
-      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
-    }
-  }
 }
 
 function resolveProvider(config, providerId) {

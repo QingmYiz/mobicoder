@@ -7,6 +7,7 @@ import '../models/optional_package.dart';
 import '../providers/setup_provider.dart';
 import '../services/package_service.dart';
 import '../widgets/progress_step.dart';
+import 'dashboard_screen.dart';
 import 'onboarding_screen.dart';
 import 'package_install_screen.dart';
 
@@ -24,6 +25,21 @@ class _SetupWizardScreenState extends State<SetupWizardScreen> {
   Future<void> _refreshPkgStatuses() async {
     final statuses = await PackageService.checkAllStatuses();
     if (mounted) setState(() => _pkgStatuses = statuses);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _skipIfAlreadySetup());
+  }
+
+  Future<void> _skipIfAlreadySetup() async {
+    final provider = context.read<SetupProvider>();
+    final setupNeeded = await provider.checkIfSetupNeeded();
+    if (!mounted || setupNeeded) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const DashboardScreen()),
+    );
   }
 
   Future<void> _installPackage(OptionalPackage package) async {

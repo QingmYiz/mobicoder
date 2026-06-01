@@ -51,31 +51,35 @@ class BootstrapManager(
     }
 
     fun isBootstrapComplete(): Boolean {
-        val rootfs = File(rootfsDir)
-        val binBash = File("$rootfsDir/bin/bash")
-        val bypass = File("$rootfsDir/root/.mobicoder/bionic-bypass.js")
-        val node = File("$rootfsDir/usr/local/bin/node")
-        val openclaw = File("$rootfsDir/usr/local/lib/node_modules/mobicoder/package.json")
-        return rootfs.exists() && binBash.exists() && bypass.exists()
-            && node.exists() && openclaw.exists()
+        val status = getBootstrapStatus()
+        return status["complete"] == true
     }
 
     fun getBootstrapStatus(): Map<String, Any> {
         val rootfsExists = File(rootfsDir).exists()
-        val binBashExists = File("$rootfsDir/bin/bash").exists()
+        val binBashExists = File("$rootfsDir/bin/bash").exists() || File("$rootfsDir/usr/bin/bash").exists()
         val nodeExists = File("$rootfsDir/usr/local/bin/node").exists()
-        val openclawExists = File("$rootfsDir/usr/local/lib/node_modules/mobicoder/package.json").exists()
+        val agentPackageJson = listOf(
+            File("$rootfsDir/usr/local/lib/node_modules/mobicoder-agent/package.json"),
+            File("$rootfsDir/usr/local/lib/node_modules/mobicoder/package.json"),
+            File("$rootfsDir/mobicoder-agent/package.json")
+        ).firstOrNull { it.exists() }
+        val agentExists = agentPackageJson != null
         val bypassExists = File("$rootfsDir/root/.mobicoder/bionic-bypass.js").exists()
+        val wrapperExists = File("$rootfsDir/root/.mobicoder/node-wrapper.js").exists()
 
         return mapOf(
             "rootfsExists" to rootfsExists,
             "binBashExists" to binBashExists,
             "nodeInstalled" to nodeExists,
-            "openclawInstalled" to openclawExists,
+            "agentInstalled" to agentExists,
+            "openclawInstalled" to agentExists,
             "bypassInstalled" to bypassExists,
+            "wrapperInstalled" to wrapperExists,
+            "agentPackagePath" to (agentPackageJson?.absolutePath ?: ""),
             "rootfsPath" to rootfsDir,
             "complete" to (rootfsExists && binBashExists && bypassExists
-                && nodeExists && openclawExists)
+                && wrapperExists && nodeExists && agentExists)
         )
     }
 

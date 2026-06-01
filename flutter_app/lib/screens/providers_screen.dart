@@ -57,9 +57,9 @@ class _ProvidersScreenState extends State<ProvidersScreen> {
     if (_activeModel != null) {
       final isActive = provider.defaultModels.any((m) => _activeModel!.contains(m)) ||
           _activeModel!.contains(provider.id);
-      if (isActive) return 'Active';
+      if (isActive) return '使用中';
     }
-    return 'Configured';
+    return '已配置';
   }
 
   @override
@@ -68,7 +68,7 @@ class _ProvidersScreenState extends State<ProvidersScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('AI Providers')),
+      appBar: AppBar(title: const Text('AI 提供商')),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
@@ -98,7 +98,7 @@ class _ProvidersScreenState extends State<ProvidersScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Active Model',
+                                  '当前模型',
                                   style: theme.textTheme.labelSmall?.copyWith(
                                     color: AppColors.statusGreen,
                                     fontWeight: FontWeight.w600,
@@ -121,7 +121,7 @@ class _ProvidersScreenState extends State<ProvidersScreen> {
                   const SizedBox(height: 16),
                 ],
                 Text(
-                  'Select a provider to configure its API key and model.',
+                  '选择一个提供商，配置 API Key、接口地址和默认模型。',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -177,7 +177,7 @@ class _ProvidersScreenState extends State<ProvidersScreen> {
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color: (status == 'Active'
+                              color: (status == '使用中'
                                       ? AppColors.statusGreen
                                       : AppColors.statusAmber)
                                   .withAlpha(25),
@@ -186,7 +186,7 @@ class _ProvidersScreenState extends State<ProvidersScreen> {
                             child: Text(
                               status,
                               style: theme.textTheme.labelSmall?.copyWith(
-                                color: status == 'Active'
+                                color: status == '使用中'
                                     ? AppColors.statusGreen
                                     : AppColors.statusAmber,
                                 fontWeight: FontWeight.w600,

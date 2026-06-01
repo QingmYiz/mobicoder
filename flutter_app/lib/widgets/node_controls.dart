@@ -26,7 +26,7 @@ class NodeControls extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        'Node',
+                        '手机能力',
                         style: theme.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
@@ -38,7 +38,7 @@ class NodeControls extends StatelessWidget {
                 const SizedBox(height: 8),
                 if (state.isPaired) ...[
                   Text(
-                    'Connected to ${state.gatewayHost}:${state.gatewayPort}',
+                    '已连接到 ${state.gatewayHost}:${state.gatewayPort}',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                       fontFamily: 'monospace',
@@ -50,7 +50,7 @@ class NodeControls extends StatelessWidget {
                   Row(
                     children: [
                       Text(
-                        'Pairing code: ',
+                        '配对码：',
                         style: theme.textTheme.bodyMedium,
                       ),
                       SelectableText(
@@ -78,20 +78,20 @@ class NodeControls extends StatelessWidget {
                       FilledButton.icon(
                         onPressed: () => provider.enable(),
                         icon: const Icon(Icons.power_settings_new),
-                        label: const Text('Enable Node'),
+                        label: const Text('启用手机能力'),
                       ),
                     if (!state.isDisabled) ...[
                       OutlinedButton.icon(
                         onPressed: () => provider.disable(),
                         icon: const Icon(Icons.stop),
-                        label: const Text('Disable Node'),
+                        label: const Text('停用手机能力'),
                       ),
                       if (state.status == NodeStatus.error ||
                           state.status == NodeStatus.disconnected)
                         OutlinedButton.icon(
                           onPressed: () => provider.reconnect(),
                           icon: const Icon(Icons.refresh),
-                          label: const Text('Reconnect'),
+                          label: const Text('重新连接'),
                         ),
                     ],
                     OutlinedButton.icon(
@@ -99,7 +99,7 @@ class NodeControls extends StatelessWidget {
                         MaterialPageRoute(builder: (_) => const NodeScreen()),
                       ),
                       icon: const Icon(Icons.settings),
-                      label: const Text('Configure'),
+                      label: const Text('配置'),
                     ),
                   ],
                 ),
@@ -119,25 +119,25 @@ class NodeControls extends StatelessWidget {
     switch (status) {
       case NodeStatus.paired:
         color = AppColors.statusGreen;
-        label = 'Paired';
+        label = '已连接';
         icon = Icons.check_circle_outline;
       case NodeStatus.connecting:
       case NodeStatus.challenging:
       case NodeStatus.pairing:
         color = AppColors.statusAmber;
-        label = 'Connecting';
+        label = '连接中';
         icon = Icons.hourglass_top;
       case NodeStatus.error:
         color = AppColors.statusRed;
-        label = 'Error';
+        label = '错误';
         icon = Icons.error_outline;
       case NodeStatus.disabled:
         color = AppColors.statusGrey;
-        label = 'Disabled';
+        label = '未启用';
         icon = Icons.circle_outlined;
       case NodeStatus.disconnected:
         color = AppColors.statusGrey;
-        label = 'Disconnected';
+        label = '未连接';
         icon = Icons.link_off;
     }
 

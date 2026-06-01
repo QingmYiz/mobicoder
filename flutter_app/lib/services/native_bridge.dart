@@ -135,6 +135,14 @@ class NativeBridge {
     return _eventChannel.receiveBroadcastStream().map((event) => event.toString());
   }
 
+  static Future<bool> shareFile(String path, {String mimeType = 'application/vnd.android.package-archive'}) async {
+    return await _channel.invokeMethod('shareFile', {'path': path, 'mimeType': mimeType});
+  }
+
+  static Future<bool> installApk(String path) async {
+    return await _channel.invokeMethod('installApk', {'path': path});
+  }
+
   static Future<String?> requestScreenCapture(int durationMs) async {
     return await _channel.invokeMethod('requestScreenCapture', {'durationMs': durationMs});
   }

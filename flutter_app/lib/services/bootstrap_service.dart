@@ -61,6 +61,17 @@ class BootstrapService {
       try { await NativeBridge.setupDirs(); } catch (_) {}
       try { await NativeBridge.writeResolv(); } catch (_) {}
 
+      final currentStatus = await NativeBridge.getBootstrapStatus();
+      if (currentStatus['complete'] == true) {
+        _stopSetupService();
+        onProgress(const SetupState(
+          step: SetupStep.complete,
+          progress: 1.0,
+          message: '环境已安装，直接进入应用',
+        ));
+        return;
+      }
+
       // Step 1: Download rootfs
       final arch = await NativeBridge.getArch();
       final rootfsUrl = AppConstants.getRootfsUrl(arch);

@@ -3,10 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../app.dart';
 import '../constants.dart';
+import 'agent_screen.dart';
+import 'build_screen.dart';
 
 class FileManagerScreen extends StatefulWidget {
   final String? initialPath;
-  const FileManagerScreen({super.key, this.initialPath});
+  final String? projectName;
+  const FileManagerScreen({super.key, this.initialPath, this.projectName});
 
   @override
   State<FileManagerScreen> createState() => _FileManagerScreenState();
@@ -21,6 +24,18 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
   bool _editing = false;
   final _editController = TextEditingController();
   String? _error;
+
+  String? get _projectName {
+    if (widget.projectName != null && widget.projectName!.isNotEmpty) {
+      return widget.projectName;
+    }
+    final clean = _currentPath.replaceFirst(RegExp(r'^/+'), '');
+    if (clean.isEmpty) return null;
+    return clean.split('/').first;
+  }
+
+  bool get _isProjectRoot =>
+      _projectName != null && (_currentPath == '/$_projectName' || _currentPath == '/');
 
   @override
   void initState() {
@@ -66,11 +81,10 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
           });
         }
       } else {
-        setState(() => _error = 'Failed to load: ${response.statusCode}');
+        setState(() => _error = '加载失败：${response.statusCode}');
       }
     } catch (e) {
-      setState(() => _error = 'Connection error: $e');
-      // Auto-connect if agent is available
+      setState(() => _error = '连接失败：$e');
     } finally {
       setState(() => _loading = false);
     }
@@ -89,11 +103,61 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
       );
       setState(() => _editing = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('File saved')),
+        const SnackBar(content: Text('文件已保存')),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Save failed: $e')),
+        SnackBar(content: Text('保存失败：$e')),
+      );
+    }
+  }
+
+  Future<void> _renameEntry(String oldPath, String oldName) async {
+    final nameCtrl = TextEditingController(text: oldName);
+    final newName = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('重命名'),
+        content: TextField(
+          controller: nameCtrl,
+          decoration: const InputDecoration(
+            labelText: '新名称',
+            hintText: '输入新的文件或文件夹名称',
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, nameCtrl.text.trim()),
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+    if (newName == null || newName.isEmpty || newName == oldName) return;
+
+    try {
+      final response = await http.patch(
+        Uri.parse('${AppConstants.agentUrl}/api/files'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'path': oldPath,
+          'name': newName,
+        }),
+      );
+      if (response.statusCode >= 400) {
+        final data = jsonDecode(response.body);
+        throw Exception(data['error'] ?? 'rename failed');
+      }
+      await _loadDirectory();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('重命名失败：$e')),
       );
     }
   }
@@ -102,17 +166,17 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete?'),
-        content: Text('Delete "$path"?'),
+        title: const Text('确认删除？'),
+        content: Text('确定删除“$path”吗？'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: const Text('取消'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(foregroundColor: AppColors.statusRed),
-            child: const Text('Delete'),
+            child: const Text('删除'),
           ),
         ],
       ),
@@ -127,7 +191,7 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
       _loadDirectory();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Delete failed: $e')),
+        SnackBar(content: Text('删除失败：$e')),
       );
     }
   }
@@ -148,44 +212,99 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
     }
   }
 
-  void _createFile() {
+  String _joinPath(String name) {
+    if (_currentPath == '/') return '/$name';
+    return '$_currentPath/$name'.replaceAll('//', '/');
+  }
+
+  String _parentPath(String path) {
+    final parts = path.split('/')..removeWhere((p) => p.isEmpty);
+    if (parts.length <= 1) return '/';
+    parts.removeLast();
+    return '/${parts.join('/')}';
+  }
+
+  Future<void> _openFile(String path) async {
+    setState(() => _currentPath = path);
+    await _loadDirectory();
+    if (!mounted) return;
+    if (_selectedPath != null) {
+      setState(() => _editing = true);
+    }
+  }
+
+  void _createEntry({required bool isDirectory}) {
     final nameCtrl = TextEditingController();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('New File'),
+        title: Text(isDirectory ? '新建文件夹' : '新建文件'),
         content: TextField(
           controller: nameCtrl,
-          decoration: const InputDecoration(hintText: 'filename.ext'),
+          decoration: InputDecoration(
+            hintText: isDirectory ? '输入文件夹名称' : '输入文件名，例如 main.dart',
+          ),
           autofocus: true,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+            child: const Text('取消'),
           ),
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
               final name = nameCtrl.text.trim();
               if (name.isEmpty) return;
-              final fullPath =
-                  '$_currentPath/${_currentPath.endsWith('/') ? '' : '/'}$name';
+              final fullPath = _joinPath(name);
               try {
                 await http.post(
                   Uri.parse('${AppConstants.agentUrl}/api/files'),
                   headers: {'Content-Type': 'application/json'},
                   body: jsonEncode({
                     'path': fullPath,
-                    'content': '',
+                    'content': isDirectory ? null : '',
+                    'kind': isDirectory ? 'directory' : 'file',
                   }),
                 );
-                _loadDirectory();
-              } catch (_) {}
+                if (isDirectory) {
+                  await _loadDirectory();
+                } else {
+                  await _openFile(fullPath);
+                }
+              } catch (e) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('创建失败：$e')),
+                );
+              }
             },
-            child: const Text('Create'),
+            child: const Text('创建'),
           ),
         ],
+      ),
+    );
+  }
+
+  void _openAgentForProject() {
+    final projectName = _projectName;
+    if (projectName == null) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AgentScreen(
+          projectName: projectName,
+          workdir: '/$projectName',
+        ),
+      ),
+    );
+  }
+
+  void _openBuildForProject() {
+    final projectName = _projectName;
+    if (projectName == null) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => BuildScreen(initialProject: projectName),
       ),
     );
   }
@@ -197,40 +316,61 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_selectedPath != null
-            ? 'Editor: ${_selectedPath!.split('/').last}'
-            : 'File Manager'),
+            ? '编辑器：${_selectedPath!.split('/').last}'
+            : '文件管理'),
         actions: [
           if (_selectedPath != null) ...[
             if (_editing)
               IconButton(
                 icon: const Icon(Icons.save),
                 onPressed: _saveFile,
-                tooltip: 'Save',
+                tooltip: '保存',
               )
             else
               IconButton(
                 icon: const Icon(Icons.edit),
                 onPressed: () => setState(() => _editing = true),
-                tooltip: 'Edit',
+                tooltip: '编辑',
               ),
             IconButton(
               icon: const Icon(Icons.close),
               onPressed: () {
+                final parentPath = _selectedPath != null
+                    ? _parentPath(_selectedPath!)
+                    : _currentPath;
                 setState(() {
+                  _currentPath = parentPath;
                   _selectedContent = null;
                   _selectedPath = null;
                   _editing = false;
-                  _loadDirectory();
                 });
+                _loadDirectory();
               },
-              tooltip: 'Close',
+              tooltip: '关闭',
             ),
           ],
           if (_selectedPath == null) ...[
+            if (_projectName != null) ...[
+              IconButton(
+                icon: const Icon(Icons.android),
+                onPressed: _openAgentForProject,
+                tooltip: '打开 Agent',
+              ),
+              IconButton(
+                icon: const Icon(Icons.build),
+                onPressed: _openBuildForProject,
+                tooltip: '构建项目',
+              ),
+            ],
+            IconButton(
+              icon: const Icon(Icons.note_add),
+              onPressed: () => _createEntry(isDirectory: false),
+              tooltip: '新建文件',
+            ),
             IconButton(
               icon: const Icon(Icons.create_new_folder),
-              onPressed: _createFile,
-              tooltip: 'New File',
+              onPressed: () => _createEntry(isDirectory: true),
+              tooltip: '新建文件夹',
             ),
             IconButton(
               icon: const Icon(Icons.refresh),
@@ -250,7 +390,7 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
                       const SizedBox(height: 16),
                       FilledButton(
                         onPressed: _loadDirectory,
-                        child: const Text('Retry'),
+                        child: const Text('重试'),
                       ),
                     ],
                   ),
@@ -284,9 +424,17 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
                   : Column(
                       children: [
                         _buildPathBar(theme),
+                        if (_projectName != null && _isProjectRoot)
+                          _ProjectQuickBar(
+                            projectName: _projectName!,
+                            onOpenAgent: _openAgentForProject,
+                            onOpenBuild: _openBuildForProject,
+                            onCreateFile: () => _createEntry(isDirectory: false),
+                            onCreateFolder: () => _createEntry(isDirectory: true),
+                          ),
                         Expanded(
                           child: _entries.isEmpty
-                              ? const Center(child: Text('Empty directory'))
+                              ? const Center(child: Text('当前目录为空'))
                               : ListView.builder(
                                   itemCount: _entries.length,
                                   itemBuilder: (context, index) {
@@ -302,20 +450,31 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
                                                 .onSurfaceVariant,
                                       ),
                                       title: Text(entry.name),
-                                      trailing: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          if (!entry.isDirectory)
-                                            IconButton(
-                                              icon: const Icon(Icons.delete,
-                                                  size: 18),
-                                              onPressed: () =>
-                                                  _deleteFile(entry.path),
-                                            ),
-                                          const Icon(Icons.chevron_right),
+                                      subtitle: entry.isDirectory
+                                          ? const Text('文件夹')
+                                          : Text(entry.path),
+                                      trailing: PopupMenuButton<String>(
+                                        onSelected: (value) {
+                                          if (value == 'rename') {
+                                            _renameEntry(entry.path, entry.name);
+                                          } else if (value == 'delete') {
+                                            _deleteFile(entry.path);
+                                          }
+                                        },
+                                        itemBuilder: (context) => const [
+                                          PopupMenuItem(
+                                            value: 'rename',
+                                            child: Text('重命名'),
+                                          ),
+                                          PopupMenuItem(
+                                            value: 'delete',
+                                            child: Text('删除'),
+                                          ),
                                         ],
                                       ),
-                                      onTap: () => _navigateTo(entry.path),
+                                      onTap: () => entry.isDirectory
+                                          ? _navigateTo(entry.path)
+                                          : _openFile(entry.path),
                                     );
                                   },
                                 ),
@@ -409,4 +568,73 @@ class _FileEntry {
   });
 
   bool get isDirectory => type == 'directory';
+}
+
+class _ProjectQuickBar extends StatelessWidget {
+  final String projectName;
+  final VoidCallback onOpenAgent;
+  final VoidCallback onOpenBuild;
+  final VoidCallback onCreateFile;
+  final VoidCallback onCreateFolder;
+
+  const _ProjectQuickBar({
+    required this.projectName,
+    required this.onOpenAgent,
+    required this.onOpenBuild,
+    required this.onCreateFile,
+    required this.onCreateFolder,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withAlpha(70),
+        border: Border(
+          bottom: BorderSide(color: theme.colorScheme.outline),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            projectName,
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              FilledButton.tonalIcon(
+                onPressed: onCreateFile,
+                icon: const Icon(Icons.note_add),
+                label: const Text('新建文件'),
+              ),
+              FilledButton.tonalIcon(
+                onPressed: onCreateFolder,
+                icon: const Icon(Icons.create_new_folder),
+                label: const Text('新建文件夹'),
+              ),
+              FilledButton.icon(
+                onPressed: onOpenAgent,
+                icon: const Icon(Icons.android),
+                label: const Text('打开 Agent'),
+              ),
+              FilledButton.icon(
+                onPressed: onOpenBuild,
+                icon: const Icon(Icons.build),
+                label: const Text('构建项目'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }

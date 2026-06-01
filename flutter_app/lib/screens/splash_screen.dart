@@ -123,20 +123,21 @@ class _SplashScreenState extends State<SplashScreen>
           final rootfsOk = status['rootfsExists'] == true;
           final bashOk = status['binBashExists'] == true;
           final nodeOk = status['nodeInstalled'] == true;
-          final agentOk = status['agentInstalled'] == true;
+          final agentOk = status['agentInstalled'] == true || status['openclawInstalled'] == true;
           final bypassOk = status['bypassInstalled'] == true;
+          final wrapperOk = status['wrapperInstalled'] == true;
 
           // Core rootfs must exist — can't repair without it
           if (rootfsOk && bashOk) {
-            // Regenerate bionic bypass if missing
-            if (!bypassOk) {
-              setState(() => _status = 'Repairing bionic bypass...');
+            // Regenerate bionic bypass / node wrapper if missing.
+            if (!bypassOk || !wrapperOk) {
+              setState(() => _status = '修复启动脚本...');
               await NativeBridge.installBionicBypass();
             }
 
             // Reinstall node if binary is missing (#97)
             if (!nodeOk) {
-              setState(() => _status = 'Reinstalling Node.js...');
+              setState(() => _status = '正在修复 Node.js...');
               try {
                 final arch = await NativeBridge.getArch();
                 final nodeTarUrl = AppConstants.getNodeTarballUrl(arch);
@@ -150,7 +151,7 @@ class _SplashScreenState extends State<SplashScreen>
 
             // Reinstall agent if package.json is missing (#97)
             if (!agentOk && nodeOk) {
-              setState(() => _status = 'Reinstalling MobiCoder Agent...');
+              setState(() => _status = '正在修复 MobiCoder Agent...');
               try {
                 const wrapper = '/root/.mobicoder/node-wrapper.js';
                 const nodeRun = 'node $wrapper';

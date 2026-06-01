@@ -13,7 +13,7 @@ import '../services/preferences_service.dart';
 import '../widgets/terminal_toolbar.dart';
 import 'dashboard_screen.dart';
 
-/// Runs `openclaw onboard` in a terminal so the user can configure
+/// Runs the Agent onboarding command in a terminal so the user can configure
 /// API keys and select loopback binding. Shown after first-time setup
 /// and accessible from the dashboard for re-configuration.
 class OnboardingScreen extends StatefulWidget {
@@ -106,19 +106,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
       // Replace the login shell with a command that runs onboarding.
       // buildProotArgs ends with [..., '/bin/bash', '-l']
-      // Replace with [..., '/bin/bash', '-lc', 'openclaw onboard']
+      // Replace with [..., '/bin/bash', '-lc', 'mobicoder onboard']
 
       final onboardingArgs = List<String>.from(args);
       onboardingArgs.removeLast(); // remove '-l'
       onboardingArgs.removeLast(); // remove '/bin/bash'
       onboardingArgs.addAll([
         '/bin/bash', '-lc',
-        'echo "=== OpenClaw Onboarding ===" && '
-        'echo "Configure your API keys and binding settings." && '
-        'echo "TIP: Select Loopback (127.0.0.1) when asked for binding!" && '
+        'echo "=== MobiCoder 初始化配置 ===" && '
+        'echo "配置 API Key 和本机绑定设置。" && '
+        'echo "提示：需要选择绑定地址时，请选择 Loopback (127.0.0.1)。" && '
         'echo "" && '
-        'openclaw onboard; '
-        'echo "" && echo "Onboarding complete! You can close this screen."',
+        '(mobicoder onboard || openclaw onboard); '
+        'echo "" && echo "初始化配置已完成，可以关闭此页面。"',
       ]);
 
       _pty = Pty.start(
@@ -318,7 +318,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(path != null
-            ? 'Screenshot saved: ${path.split('/').last}'
+            ? '截图已保存：${path.split('/').last}'
             : 'Failed to capture screenshot'),
       ),
     );
@@ -415,7 +415,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('OpenClaw Onboarding'),
+        title: const Text('MobiCoder 初始化配置'),
         leading: widget.isFirstRun
             ? null // no back button during first-run
             : IconButton(
@@ -426,7 +426,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.camera_alt_outlined),
-            tooltip: 'Screenshot',
+            tooltip: '截图',
             onPressed: _takeScreenshot,
           ),
           IconButton(

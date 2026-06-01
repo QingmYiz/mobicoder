@@ -85,15 +85,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(title: const Text('设置')),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
               children: [
-                _sectionHeader(theme, 'GENERAL'),
+                _sectionHeader(theme, '通用'),
                 SwitchListTile(
-                  title: const Text('Auto-start agent'),
-                  subtitle: const Text('Start the agent when the app opens'),
+                  title: const Text('自动启动 Agent'),
+                  subtitle: const Text('应用打开后自动启动 Agent 服务'),
                   value: _autoStart,
                   onChanged: (value) {
                     setState(() => _autoStart = value);
@@ -101,10 +101,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   },
                 ),
                 ListTile(
-                  title: const Text('Battery Optimization'),
+                  title: const Text('电池优化'),
                   subtitle: Text(_batteryOptimized
-                      ? 'Optimized (may kill background sessions)'
-                      : 'Unrestricted (recommended)'),
+                      ? '当前受系统限制，后台会话可能被关闭'
+                      : '已放开限制（推荐）'),
                   leading: const Icon(Icons.battery_alert),
                   trailing: _batteryOptimized
                       ? const Icon(Icons.warning, color: AppColors.statusAmber)
@@ -117,10 +117,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   },
                 ),
                 ListTile(
-                  title: const Text('Setup Storage'),
+                  title: const Text('存储访问'),
                   subtitle: Text(_storageGranted
-                      ? 'Granted — proot can access /sdcard. Revoke if not needed.'
-                      : 'Not granted (recommended) — tap to grant only if needed'),
+                      ? '已授权，可访问 /sdcard；不需要时可手动关闭'
+                      : '未授权（推荐默认保持关闭），仅在需要读写外部存储时开启'),
                   leading: const Icon(Icons.sd_storage),
                   trailing: _storageGranted
                       ? const Icon(Icons.warning_amber, color: AppColors.statusAmber)
@@ -133,10 +133,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   },
                 ),
                 const Divider(),
-                _sectionHeader(theme, 'NODE'),
+                _sectionHeader(theme, '设备能力'),
                 SwitchListTile(
-                  title: const Text('Enable Node'),
-                  subtitle: const Text('Provide device capabilities to the gateway'),
+                  title: const Text('启用设备能力'),
+                  subtitle: const Text('向 Agent 提供手机设备能力'),
                   value: _nodeEnabled,
                   onChanged: (value) {
                     setState(() => _nodeEnabled = value);
@@ -150,8 +150,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   },
                 ),
                 ListTile(
-                  title: const Text('Node Configuration'),
-                  subtitle: const Text('Connection, pairing, and capabilities'),
+                  title: const Text('设备能力配置'),
+                  subtitle: const Text('连接、配对与能力开关'),
                   leading: const Icon(Icons.devices),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.of(context).push(
@@ -159,78 +159,78 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
                 const Divider(),
-                _sectionHeader(theme, 'SYSTEM INFO'),
+                _sectionHeader(theme, '系统信息'),
                 ListTile(
-                  title: const Text('Architecture'),
+                  title: const Text('系统架构'),
                   subtitle: Text(_arch),
                   leading: const Icon(Icons.memory),
                 ),
                 ListTile(
-                  title: const Text('PRoot path'),
+                  title: const Text('PRoot 路径'),
                   subtitle: Text(_prootPath),
                   leading: const Icon(Icons.folder),
                 ),
                 ListTile(
-                  title: const Text('Rootfs'),
+                  title: const Text('Rootfs 环境'),
                   subtitle: Text(_status['rootfsExists'] == true
-                      ? 'Installed'
-                      : 'Not installed'),
+                      ? '已安装'
+                      : '未安装'),
                   leading: const Icon(Icons.storage),
                 ),
                 ListTile(
                   title: const Text('Node.js'),
                   subtitle: Text(_status['nodeInstalled'] == true
-                      ? 'Installed'
-                      : 'Not installed'),
+                      ? '已安装'
+                      : '未安装'),
                   leading: const Icon(Icons.code),
                 ),
                 ListTile(
-                  title: const Text('OpenClaw'),
+                  title: const Text('Agent 服务'),
                   subtitle: Text(_status['openclawInstalled'] == true
-                      ? 'Installed'
-                      : 'Not installed'),
+                      ? '已安装'
+                      : '未安装'),
                   leading: const Icon(Icons.cloud),
                 ),
                 ListTile(
                   title: const Text('Go (Golang)'),
                   subtitle: Text(_goInstalled
-                      ? 'Installed'
-                      : 'Not installed'),
+                      ? '已安装'
+                      : '未安装'),
                   leading: const Icon(Icons.integration_instructions),
                 ),
                 ListTile(
                   title: const Text('Homebrew'),
                   subtitle: Text(_brewInstalled
-                      ? 'Installed'
-                      : 'Not installed'),
+                      ? '已安装'
+                      : '未安装'),
                   leading: const Icon(Icons.science),
                 ),
                 ListTile(
                   title: const Text('OpenSSH'),
                   subtitle: Text(_sshInstalled
-                      ? 'Installed'
-                      : 'Not installed'),
+                      ? '已安装'
+                      : '未安装'),
                   leading: const Icon(Icons.vpn_key),
                 ),
                 const Divider(),
-                _sectionHeader(theme, 'MAINTENANCE'),
+                _sectionHeader(theme, '维护'),
                 ListTile(
-                  title: const Text('Export Snapshot'),
-                  subtitle: const Text('Backup config to Downloads'),
+                  title: const Text('导出快照'),
+                  subtitle: const Text('将当前配置备份到 Downloads'),
                   leading: const Icon(Icons.upload_file),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: _exportSnapshot,
                 ),
                 ListTile(
-                  title: const Text('Import Snapshot'),
-                  subtitle: const Text('Restore config from backup'),
+                  title: const Text('导入快照'),
+                  subtitle: const Text('从备份恢复配置'),
                   leading: const Icon(Icons.download),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: _importSnapshot,
                 ),
                 ListTile(
-                  title: const Text('Re-run setup'),
-                  subtitle: const Text('Reinstall or repair the environment'),
+                  title: const Text('重新执行初始化'),
+                  subtitle: const Text('重新安装或修复当前环境'),
                   leading: const Icon(Icons.build),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.of(context).pushReplacement(
@@ -240,18 +240,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
                 const Divider(),
-                _sectionHeader(theme, 'ABOUT'),
+                _sectionHeader(theme, '关于'),
                 const ListTile(
-                  title: Text('OpenClaw'),
+                  title: Text('MobiCoder'),
                   subtitle: Text(
-                    'AI Gateway for Android\nVersion ${AppConstants.version}',
+                    'Android 手机上的 AI 编程助手\n版本 ${AppConstants.version}',
                   ),
                   leading: Icon(Icons.info_outline),
                   isThreeLine: true,
                 ),
                 ListTile(
-                  title: const Text('Check for Updates'),
-                  subtitle: const Text('Check GitHub for a newer release'),
+                  title: const Text('检查更新'),
+                  subtitle: const Text('检查 GitHub 上是否有新版本'),
                   leading: _checkingUpdate
                       ? const SizedBox(
                           width: 24,
@@ -262,7 +262,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onTap: _checkingUpdate ? null : _checkForUpdates,
                 ),
                 const ListTile(
-                  title: Text('Developer'),
+                  title: Text('开发者'),
                   subtitle: Text(AppConstants.authorName),
                   leading: Icon(Icons.person),
                 ),
@@ -277,7 +277,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
                 ListTile(
-                  title: const Text('Contact'),
+                  title: const Text('联系方式'),
                   subtitle: const Text(AppConstants.authorEmail),
                   leading: const Icon(Icons.email),
                   trailing: const Icon(Icons.open_in_new, size: 18),
@@ -286,7 +286,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
                 const ListTile(
-                  title: Text('License'),
+                  title: Text('许可证'),
                   subtitle: Text(AppConstants.license),
                   leading: Icon(Icons.description),
                 ),

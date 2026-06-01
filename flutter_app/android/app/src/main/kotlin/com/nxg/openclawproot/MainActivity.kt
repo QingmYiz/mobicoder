@@ -17,6 +17,7 @@ import android.os.PowerManager
 import android.provider.Settings
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import android.app.Activity
 import android.content.Context
 import android.os.Environment
@@ -32,6 +33,7 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
+import java.io.File
 
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.mobicoder.app/native"
@@ -414,6 +416,33 @@ class MainActivity : FlutterActivity() {
                         result.error("INVALID_ARGS", "text required", null)
                     }
                 }
+                "shareFile" -> {
+                    val path = call.argument<String>("path")
+                    val mimeType = call.argument<String>("mimeType") ?: "application/octet-stream"
+                    if (path != null) {
+                        try {
+                            shareFile(path, mimeType)
+                            result.success(true)
+                        } catch (e: Exception) {
+                            result.error("SHARE_ERROR", e.message, null)
+                        }
+                    } else {
+                        result.error("INVALID_ARGS", "path required", null)
+                    }
+                }
+                "installApk" -> {
+                    val path = call.argument<String>("path")
+                    if (path != null) {
+                        try {
+                            installApk(path)
+                            result.success(true)
+                        } catch (e: Exception) {
+                            result.error("INSTALL_ERROR", e.message, null)
+                        }
+                    } else {
+                        result.error("INVALID_ARGS", "path required", null)
+                    }
+                }
                 "requestScreenCapture" -> {
                     val durationMs = call.argument<Int>("durationMs")?.toLong() ?: 5000L
                     screenCaptureResult = result
@@ -679,6 +708,34 @@ class MainActivity : FlutterActivity() {
 
         val manager = getSystemService(NotificationManager::class.java)
         manager.notify(urlNotificationId++, notification)
+    }
+
+    private fun fileUriFor(path: String): Uri {
+        val file = File(path)
+        if (!file.exists()) {
+            throw IllegalArgumentException("文件不存在：$path")
+        }
+        return FileProvider.getUriForFile(this, "${packageName}.fileprovider", file)
+    }
+
+    private fun shareFile(path: String, mimeType: String) {
+        val uri = fileUriFor(path)
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = mimeType
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        startActivity(Intent.createChooser(intent, "分享文件"))
+    }
+
+    private fun installApk(path: String) {
+        val uri = fileUriFor(path)
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, "application/vnd.android.package-archive")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        startActivity(intent)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

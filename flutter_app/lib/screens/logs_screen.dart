@@ -32,23 +32,23 @@ class _LogsScreenState extends State<LogsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Agent Logs'),
+        title: const Text('运行日志'),
         actions: [
           IconButton(
             icon: const Icon(Icons.camera_alt_outlined),
-            tooltip: 'Screenshot',
+            tooltip: '截图',
             onPressed: _takeScreenshot,
           ),
           IconButton(
             icon: Icon(
               _autoScroll ? Icons.vertical_align_bottom : Icons.vertical_align_top,
             ),
-            tooltip: _autoScroll ? 'Auto-scroll on' : 'Auto-scroll off',
+            tooltip: _autoScroll ? '自动滚动已开启' : '自动滚动已关闭',
             onPressed: () => setState(() => _autoScroll = !_autoScroll),
           ),
           IconButton(
             icon: const Icon(Icons.copy),
-            tooltip: 'Copy all logs',
+            tooltip: '复制全部日志',
             onPressed: () => _copyLogs(context),
           ),
         ],
@@ -60,7 +60,7 @@ class _LogsScreenState extends State<LogsScreen> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Filter logs...',
+                hintText: '筛选日志...',
                 prefixIcon: const Icon(Icons.search),
                 isDense: true,
                 contentPadding: const EdgeInsets.symmetric(
@@ -94,7 +94,7 @@ class _LogsScreenState extends State<LogsScreen> {
                 if (filtered.isEmpty) {
                   return Center(
                     child: Text(
-                      logs.isEmpty ? 'No logs yet. Start the agent.' : 'No matching logs.',
+                      logs.isEmpty ? '暂无日志，请先启动 Agent。' : '没有匹配的日志。',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -154,8 +154,8 @@ class _LogsScreenState extends State<LogsScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(path != null
-            ? 'Screenshot saved: ${path.split('/').last}'
-            : 'Failed to capture screenshot'),
+            ? '截图已保存：${path.split('/').last}'
+            : '截图失败'),
       ),
     );
   }
@@ -165,7 +165,7 @@ class _LogsScreenState extends State<LogsScreen> {
     final text = provider.state.logs.join('\n');
     Clipboard.setData(ClipboardData(text: text));
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Logs copied to clipboard')),
+      const SnackBar(content: Text('日志已复制到剪贴板')),
     );
   }
 }

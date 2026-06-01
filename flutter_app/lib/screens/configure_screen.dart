@@ -10,8 +10,8 @@ import '../services/screenshot_service.dart';
 import '../services/terminal_service.dart';
 import '../widgets/terminal_toolbar.dart';
 
-/// Runs `openclaw configure` in a terminal so the user can manage
-/// gateway settings. Accessible from the dashboard.
+/// Runs the Agent configuration command in a terminal so the user can manage
+/// model and connection settings. Accessible from the dashboard.
 class ConfigureScreen extends StatefulWidget {
   const ConfigureScreen({super.key});
 
@@ -89,11 +89,11 @@ class _ConfigureScreenState extends State<ConfigureScreen> {
       configureArgs.removeLast(); // remove '/bin/bash'
       configureArgs.addAll([
         '/bin/bash', '-lc',
-        'echo "=== OpenClaw Configure ===" && '
-        'echo "Manage your gateway settings." && '
+        'echo "=== MobiCoder 配置 ===" && '
+        'echo "配置模型、密钥和连接设置。" && '
         'echo "" && '
-        'openclaw configure; '
-        'echo "" && echo "Configuration complete! You can close this screen."',
+        '(mobicoder configure || openclaw configure); '
+        'echo "" && echo "配置已完成，可以关闭此页面。"',
       ]);
 
       _pty = Pty.start(
@@ -255,7 +255,7 @@ class _ConfigureScreenState extends State<ConfigureScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(path != null
-            ? 'Screenshot saved: ${path.split('/').last}'
+            ? '截图已保存：${path.split('/').last}'
             : 'Failed to capture screenshot'),
       ),
     );
@@ -265,7 +265,7 @@ class _ConfigureScreenState extends State<ConfigureScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('OpenClaw Configure'),
+        title: const Text('MobiCoder 配置'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
@@ -274,7 +274,7 @@ class _ConfigureScreenState extends State<ConfigureScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.camera_alt_outlined),
-            tooltip: 'Screenshot',
+            tooltip: '截图',
             onPressed: _takeScreenshot,
           ),
           IconButton(

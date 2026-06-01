@@ -70,7 +70,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
       if (response.statusCode != 200) {
         setState(() {
-          _error = 'Server error: ${response.statusCode}';
+          _error = '服务错误：${response.statusCode}';
           _messages.removeLast();
           _loading = false;
         });
@@ -101,12 +101,12 @@ class _ChatScreenState extends State<ChatScreen> {
       if (fullContent.isEmpty) {
         setState(() {
           _messages[assistantIndex] =
-              const _ChatMessage(role: 'assistant', content: '(no response)');
+              const _ChatMessage(role: 'assistant', content: '(暂无回复)');
         });
       }
     } catch (e) {
       setState(() {
-        _error = 'Connection failed: $e';
+        _error = '连接失败：$e';
         _messages.removeLast();
       });
     } finally {
@@ -120,7 +120,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('AI Chat'),
+        title: const Text('AI 对话'),
       ),
       body: Column(
         children: [
@@ -164,7 +164,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          isUser ? 'You' : 'MobiCoder',
+                          isUser ? '你' : 'MobiCoder',
                           style: theme.textTheme.labelSmall?.copyWith(
                             color: isUser
                                 ? Colors.white70
@@ -175,7 +175,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         const SizedBox(height: 4),
                         SelectableText(
                           msg.content.isEmpty && !isUser
-                              ? 'Thinking...'
+                              ? '思考中...'
                               : msg.content,
                           style: TextStyle(
                             color: isUser
@@ -208,7 +208,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     controller: _controller,
                     enabled: !_loading,
                     decoration: const InputDecoration(
-                      hintText: 'Ask anything...',
+                      hintText: '输入你的问题或需求...',
                       border: InputBorder.none,
                       contentPadding: EdgeInsets.symmetric(horizontal: 12),
                     ),

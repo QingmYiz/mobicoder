@@ -62,19 +62,19 @@ class NodeState {
   String get statusText {
     switch (status) {
       case NodeStatus.disabled:
-        return 'Disabled';
+        return '未启用';
       case NodeStatus.disconnected:
-        return 'Disconnected';
+        return '未连接';
       case NodeStatus.connecting:
-        return 'Connecting...';
+        return '连接中...';
       case NodeStatus.challenging:
-        return 'Authenticating...';
+        return '认证中...';
       case NodeStatus.pairing:
-        return 'Pairing...';
+        return '配对中...';
       case NodeStatus.paired:
-        return 'Paired';
+        return '已配对';
       case NodeStatus.error:
-        return 'Error';
+        return '错误';
     }
   }
 }

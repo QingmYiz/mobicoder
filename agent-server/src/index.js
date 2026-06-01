@@ -32,6 +32,7 @@ app.post('/api/chat', handleChat);
 // File operations
 app.get('/api/files', (req, res) => handleFilesApi('list', req, res));
 app.post('/api/files', (req, res) => handleFilesApi('write', req, res));
+app.patch('/api/files', (req, res) => handleFilesApi('rename', req, res));
 app.delete('/api/files', (req, res) => handleFilesApi('delete', req, res));
 
 // Build APK
@@ -71,6 +72,66 @@ app.get('/api/templates', (_req, res) => {
   }
 });
 
+function getProjectsDir() {
+  return path.join(__dirname, '..', '..', 'projects');
+}
+
+function assertSafeProjectName(name) {
+  if (!name || typeof name !== 'string') {
+    throw new Error('project name required');
+  }
+  if (!/^[a-zA-Z0-9._-]+$/.test(name) || name.includes('..')) {
+    throw new Error('invalid project name');
+  }
+  return name;
+}
+
+function projectPath(name) {
+  const safeName = assertSafeProjectName(name);
+  const projectsDir = getProjectsDir();
+  const resolved = path.resolve(projectsDir, safeName);
+  const root = path.resolve(projectsDir);
+  if (resolved !== root && !resolved.startsWith(root + path.sep)) {
+    throw new Error('project path escapes workspace');
+  }
+  return resolved;
+}
+
+function collectProjectStats(projectDir) {
+  let fileCount = 0;
+  let updatedAtMs = 0;
+  let hasAndroidProject = false;
+  let hasGradleWrapper = false;
+
+  const walk = (dir) => {
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+      const stat = fs.statSync(fullPath);
+      updatedAtMs = Math.max(updatedAtMs, stat.mtimeMs || 0);
+      if (entry.isDirectory()) {
+        walk(fullPath);
+      } else {
+        fileCount += 1;
+        if (entry.name === 'build.gradle' || entry.name === 'build.gradle.kts') {
+          hasAndroidProject = true;
+        }
+        if (entry.name === 'gradlew') {
+          hasGradleWrapper = true;
+        }
+      }
+    }
+  };
+
+  walk(projectDir);
+  return {
+    fileCount,
+    updatedAt: updatedAtMs ? new Date(updatedAtMs).toISOString() : null,
+    buildReady: hasAndroidProject,
+    hasGradleWrapper,
+  };
+}
+
 // Create new project from template
 app.post('/api/projects', (req, res) => {
   const { name, template } = req.body;
@@ -78,8 +139,13 @@ app.post('/api/projects', (req, res) => {
     return res.status(400).json({ error: 'name and template required' });
   }
   const tmplDir = path.join(__dirname, '..', 'templates', template);
-  const projectsDir = path.join(__dirname, '..', '..', 'projects');
-  const targetDir = path.join(projectsDir, name);
+  const projectsDir = getProjectsDir();
+  let targetDir;
+  try {
+    targetDir = projectPath(name);
+  } catch (e) {
+    return res.status(400).json({ error: e.message });
+  }
 
   if (!fs.existsSync(tmplDir)) {
     return res.status(404).json({ error: `Template "${template}" not found` });
@@ -90,22 +156,66 @@ app.post('/api/projects', (req, res) => {
 
   try {
     fs.cpSync(tmplDir, targetDir, { recursive: true });
-    res.json({ ok: true, path: targetDir });
+    const stats = collectProjectStats(targetDir);
+    res.json({ ok: true, path: targetDir, project: { name, ...stats } });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
 
+// Rename project
+app.patch('/api/projects/:name', (req, res) => {
+  const { newName } = req.body || {};
+  try {
+    const oldName = assertSafeProjectName(req.params.name);
+    const safeNewName = assertSafeProjectName(newName);
+    const sourceDir = projectPath(oldName);
+    const targetDir = projectPath(safeNewName);
+
+    if (!fs.existsSync(sourceDir)) {
+      return res.status(404).json({ error: 'project not found' });
+    }
+    if (fs.existsSync(targetDir)) {
+      return res.status(409).json({ error: 'target project already exists' });
+    }
+
+    fs.renameSync(sourceDir, targetDir);
+    const stats = collectProjectStats(targetDir);
+    return res.json({ ok: true, project: { name: safeNewName, ...stats } });
+  } catch (e) {
+    return res.status(400).json({ error: e.message });
+  }
+});
+
+// Delete project
+app.delete('/api/projects/:name', (req, res) => {
+  try {
+    const name = assertSafeProjectName(req.params.name);
+    const targetDir = projectPath(name);
+    if (fs.existsSync(targetDir)) {
+      fs.rmSync(targetDir, { recursive: true, force: true });
+    }
+    return res.json({ ok: true });
+  } catch (e) {
+    return res.status(400).json({ error: e.message });
+  }
+});
+
 // List projects
 app.get('/api/projects', (_req, res) => {
-  const projectsDir = path.join(__dirname, '..', '..', 'projects');
+  const projectsDir = getProjectsDir();
   try {
     if (!fs.existsSync(projectsDir)) {
       fs.mkdirSync(projectsDir, { recursive: true });
     }
     const dirs = fs.readdirSync(projectsDir, { withFileTypes: true })
       .filter(d => d.isDirectory())
-      .map(d => ({ name: d.name }));
+      .map(d => {
+        const projectDir = path.join(projectsDir, d.name);
+        const stats = collectProjectStats(projectDir);
+        return { name: d.name, ...stats };
+      })
+      .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
     res.json({ projects: dirs });
   } catch (e) {
     res.json({ projects: [] });
