@@ -165,16 +165,18 @@ class AgentService {
 
   Future<void> _checkHealth() async {
     try {
+      // OpenClaw gateway health: just check if the port is accessible.
+      // OpenClaw does not expose /api/health; any 2xx/3xx/4xx means the
+      // gateway is listening.
       final response = await http
-          .head(Uri.parse('${AppConstants.agentUrl}/api/health'))
+          .get(Uri.parse(AppConstants.agentUrl))
           .timeout(const Duration(seconds: 3));
 
-      if (response.statusCode == 200 &&
-          _state.status != AgentStatus.running) {
+      if (_state.status != AgentStatus.running) {
         _updateState(_state.copyWith(
           status: AgentStatus.running,
           startedAt: DateTime.now(),
-          logs: [..._state.logs, _ts('[INFO] Agent is healthy')],
+          logs: [..._state.logs, _ts('[INFO] OpenClaw Gateway 已就绪')],
         ));
       }
     } catch (_) {
@@ -186,7 +188,7 @@ class AgentService {
           _updateState(_state.copyWith(
             logs: [
               ..._state.logs,
-              _ts('[INFO] Starting, waiting for agent...')
+              _ts('[INFO] Starting, waiting for gateway...')
             ],
           ));
           return;
@@ -195,7 +197,7 @@ class AgentService {
           status: AgentStatus.stopped,
           logs: [
             ..._state.logs,
-            _ts('[WARN] Agent process not running')
+            _ts('[WARN] OpenClaw Gateway 进程未运行')
           ],
         ));
         _cancelAllTimers();
@@ -206,9 +208,10 @@ class AgentService {
   Future<bool> checkHealth() async {
     try {
       final response = await http
-          .head(Uri.parse('${AppConstants.agentUrl}/api/health'))
+          .get(Uri.parse(AppConstants.agentUrl))
           .timeout(const Duration(seconds: 3));
-      return response.statusCode == 200;
+      // Any response means the port is open
+      return true;
     } catch (_) {
       return false;
     }

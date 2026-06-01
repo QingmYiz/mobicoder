@@ -2,9 +2,9 @@ import 'dart:convert';
 import '../models/ai_provider.dart';
 import 'native_bridge.dart';
 
-/// Reads and writes AI provider configuration in mobicoder.json.
+/// Reads and writes AI provider configuration in openclaw.json.
 class ProviderConfigService {
-  static const _configPath = '/root/.mobicoder/mobicoder.json';
+  static const _configPath = '/root/.openclaw/openclaw.json';
 
   /// Escape a string for use as a single-quoted shell argument.
   static String _shellEscape(String s) {

@@ -28,7 +28,7 @@ class GatewayControls extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        'Agent',
+                        'OpenClaw Gateway',
                         style: theme.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),

@@ -22,8 +22,9 @@ class AppConstants {
   static const String playStoreUrl = 'https://play.google.com/store/apps/dev?id=8262374975871504599';
 
   static const String agentHost = '127.0.0.1';
-  static const int agentPort = 18790;
+  static const int agentPort = 18789;
   static const String agentUrl = 'http://$agentHost:$agentPort';
+  static const String gatewayUrl = 'http://$agentHost:$agentPort';
 
   static const String ubuntuRootfsUrl =
       'https://cdimage.ubuntu.com/ubuntu-base/releases/24.04/release/ubuntu-base-24.04.3-base-';

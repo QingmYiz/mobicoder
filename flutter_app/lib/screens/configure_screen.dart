@@ -89,10 +89,10 @@ class _ConfigureScreenState extends State<ConfigureScreen> {
       configureArgs.removeLast(); // remove '/bin/bash'
       configureArgs.addAll([
         '/bin/bash', '-lc',
-        'echo "=== MobiCoder 配置 ===" && '
+        'echo "=== OpenClaw 配置 ===" && '
         'echo "配置模型、密钥和连接设置。" && '
         'echo "" && '
-        '(mobicoder configure || openclaw configure); '
+        '(openclaw configure || mobicoder configure); '
         'echo "" && echo "配置已完成，可以关闭此页面。"',
       ]);
 

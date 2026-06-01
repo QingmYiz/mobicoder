@@ -117,7 +117,7 @@ class MainActivity : FlutterActivity() {
                 }
                 "startAgent" -> {
                     try {
-                        AgentService.start(applicationContext)
+                        GatewayService.start(applicationContext)
                         result.success(true)
                     } catch (e: Exception) {
                         result.error("SERVICE_ERROR", e.message, null)
@@ -125,14 +125,14 @@ class MainActivity : FlutterActivity() {
                 }
                 "stopAgent" -> {
                     try {
-                        AgentService.stop(applicationContext)
+                        GatewayService.stop(applicationContext)
                         result.success(true)
                     } catch (e: Exception) {
                         result.error("SERVICE_ERROR", e.message, null)
                     }
                 }
                 "isAgentRunning" -> {
-                    result.success(AgentService.isProcessAlive())
+                    result.success(GatewayService.isProcessAlive())
                 }
                 "startTerminalService" -> {
                     try {
@@ -640,10 +640,10 @@ class MainActivity : FlutterActivity() {
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, EVENT_CHANNEL).setStreamHandler(
             object : EventChannel.StreamHandler {
                 override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
-                    AgentService.logSink = events
+                    GatewayService.logSink = events
                 }
                 override fun onCancel(arguments: Any?) {
-                    AgentService.logSink = null
+                    GatewayService.logSink = null
                 }
             }
         )

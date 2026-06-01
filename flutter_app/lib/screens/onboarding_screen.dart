@@ -113,11 +113,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       onboardingArgs.removeLast(); // remove '/bin/bash'
       onboardingArgs.addAll([
         '/bin/bash', '-lc',
-        'echo "=== MobiCoder 初始化配置 ===" && '
+        'echo "=== OpenClaw 初始化配置 ===" && '
         'echo "配置 API Key 和本机绑定设置。" && '
         'echo "提示：需要选择绑定地址时，请选择 Loopback (127.0.0.1)。" && '
         'echo "" && '
-        '(mobicoder onboard || openclaw onboard); '
+        '(openclaw onboard || mobicoder onboard); '
         'echo "" && echo "初始化配置已完成，可以关闭此页面。"',
       ]);
 

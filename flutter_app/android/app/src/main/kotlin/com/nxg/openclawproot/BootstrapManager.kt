@@ -30,7 +30,19 @@ class BootstrapManager(
     private val libDir get() = "$filesDir/lib"
 
     fun setupDirectories() {
-        listOf(rootfsDir, tmpDir, homeDir, configDir, "$homeDir/.mobicoder", libDir).forEach {
+        listOf(
+            rootfsDir,
+            tmpDir,
+            homeDir,
+            configDir,
+            "$homeDir/.mobicoder",
+            "$homeDir/.openclaw",
+            "$rootfsDir/root/.mobicoder",
+            "$rootfsDir/root/.openclaw",
+            "$rootfsDir/root/.config/openclaw",
+            "$rootfsDir/root/.cache/openclaw",
+            libDir
+        ).forEach {
             File(it).mkdirs()
         }
         // Termux's proot links against libtalloc.so.2 but Android extracts it
@@ -60,11 +72,23 @@ class BootstrapManager(
         val binBashExists = File("$rootfsDir/bin/bash").exists() || File("$rootfsDir/usr/bin/bash").exists()
         val nodeExists = File("$rootfsDir/usr/local/bin/node").exists()
         val agentPackageJson = listOf(
+            File("$rootfsDir/usr/local/lib/node_modules/openclaw/package.json"),
+            File("$rootfsDir/usr/local/lib/node_modules/@openclaw/cli/package.json"),
+            File("$rootfsDir/usr/local/lib/node_modules/openclaw-cn/package.json"),
+            // Backward-compatible markers from earlier MobiCoder builds. These
+            // keep existing installs from redownloading rootfs; the setup flow
+            // will still install OpenClaw when users run full setup on fresh devices.
             File("$rootfsDir/usr/local/lib/node_modules/mobicoder-agent/package.json"),
             File("$rootfsDir/usr/local/lib/node_modules/mobicoder/package.json"),
             File("$rootfsDir/mobicoder-agent/package.json")
         ).firstOrNull { it.exists() }
-        val agentExists = agentPackageJson != null
+        val openClawPackageJson = listOf(
+            File("$rootfsDir/usr/local/lib/node_modules/openclaw/package.json"),
+            File("$rootfsDir/usr/local/lib/node_modules/@openclaw/cli/package.json"),
+            File("$rootfsDir/usr/local/lib/node_modules/openclaw-cn/package.json")
+        ).firstOrNull { it.exists() }
+        val openClawBinExists = File("$rootfsDir/usr/local/bin/openclaw").exists()
+        val agentExists = agentPackageJson != null || openClawBinExists
         val bypassExists = File("$rootfsDir/root/.mobicoder/bionic-bypass.js").exists()
         val wrapperExists = File("$rootfsDir/root/.mobicoder/node-wrapper.js").exists()
 
@@ -73,10 +97,11 @@ class BootstrapManager(
             "binBashExists" to binBashExists,
             "nodeInstalled" to nodeExists,
             "agentInstalled" to agentExists,
-            "openclawInstalled" to agentExists,
+            "openclawInstalled" to (openClawPackageJson != null || openClawBinExists),
             "bypassInstalled" to bypassExists,
             "wrapperInstalled" to wrapperExists,
             "agentPackagePath" to (agentPackageJson?.absolutePath ?: ""),
+            "openclawPackagePath" to (openClawPackageJson?.absolutePath ?: ""),
             "rootfsPath" to rootfsDir,
             "complete" to (rootfsExists && binBashExists && bypassExists
                 && wrapperExists && nodeExists && agentExists)
@@ -1307,17 +1332,28 @@ require('/root/.mobicoder/proot-compat.js');
             bashrc.appendText("\n# OpenClaw Bionic Bypass\n$exportLine\n")
         }
 
-        // Pre-seed mobicoder.json with gateway.mode=local so the gateway
+        // Pre-seed openclaw.json with gateway.mode=local so the gateway
         // doesn't reject startup with "set gateway.mode=local" (#93, #90).
-        val configFile = File(bypassDir, "mobicoder.json")
-        if (!configFile.exists()) {
-            configFile.writeText("""
+        // Also write to the legacy mobicoder.json path for backward compat.
+        val openClawConfigDir = File("$rootfsDir/root/.openclaw")
+        openClawConfigDir.mkdirs()
+        val configFile = File(openClawConfigDir, "openclaw.json")
+        val defaultConfigContent = """
 {
   "gateway": {
     "mode": "local"
   }
 }
-""".trimIndent())
+""".trimIndent()
+        if (!configFile.exists()) {
+            configFile.writeText(defaultConfigContent)
+            // Also write to legacy path
+            try {
+                val legacyConfig = File(bypassDir, "mobicoder.json")
+                if (!legacyConfig.exists()) {
+                    legacyConfig.writeText(defaultConfigContent)
+                }
+            } catch (_: Exception) {}
         } else {
             // Repair existing config: ensure gateway.mode and fix model entries (#83, #88)
             try {
@@ -1358,6 +1394,11 @@ require('/root/.mobicoder/proot-compat.js');
                 }
                 if (modified) {
                     configFile.writeText(json.toString(2))
+                    // Also write to legacy mobicoder.json for backward compat
+                    try {
+                        val legacyConfig = File(bypassDir, "mobicoder.json")
+                        legacyConfig.writeText(json.toString(2))
+                    } catch (_: Exception) {}
                 }
             } catch (_: Exception) {}
         }
@@ -1521,7 +1562,7 @@ require('/root/.mobicoder/proot-compat.js');
     private fun checkOpenClawInProot(): Boolean {
         return try {
             val pm = ProcessManager(filesDir, nativeLibDir)
-            val output = pm.runInProotSync("command -v mobicoder-agent")
+            val output = pm.runInProotSync("command -v openclaw")
             output.trim().isNotEmpty()
         } catch (e: Exception) {
             false

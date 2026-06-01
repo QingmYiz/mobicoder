@@ -263,41 +263,39 @@ class BootstrapService {
         message: 'Node.js installed',
       ));
 
-      // Step 4: Install MobiCoder Agent Server (80-98%)
-      _updateSetupNotification('Installing MobiCoder Agent...', progress: 82);
+      // Step 4: Install OpenClaw gateway (80-98%)
+      _updateSetupNotification('Installing OpenClaw...', progress: 82);
       onProgress(const SetupState(
         step: SetupStep.installingAgent,
         progress: 0.0,
-        message: 'Installing MobiCoder Agent Server...',
+        message: 'Installing OpenClaw gateway...',
       ));
-      // Install mobicoder-agent from the bundled agent-server source copied
-      // into the rootfs. Installing from npm registry is not enough because
-      // this app ships a local modified server implementation.
-      await NativeBridge.copyAgentServerToRootfs();
+      // OpenClaw is the primary agent runtime. Keep installation through the
+      // patched npm wrapper so proot syscall compatibility patches are loaded.
       await NativeBridge.runInProot(
-        '$nodeRun $npmCli install -g /mobicoder-agent',
+        '$nodeRun $npmCli install -g openclaw',
         timeout: 1800,
       );
 
-      _updateSetupNotification('Creating bin wrappers...', progress: 92);
+      _updateSetupNotification('Creating OpenClaw wrappers...', progress: 92);
       onProgress(const SetupState(
         step: SetupStep.installingAgent,
         progress: 0.7,
-        message: 'Creating bin wrappers...',
+        message: 'Creating OpenClaw command wrappers...',
       ));
-      await NativeBridge.createBinWrappers('mobicoder-agent');
+      await NativeBridge.createBinWrappers('openclaw');
 
-      _updateSetupNotification('Verifying Agent...', progress: 96);
+      _updateSetupNotification('Verifying OpenClaw...', progress: 96);
       onProgress(const SetupState(
         step: SetupStep.installingAgent,
         progress: 0.9,
-        message: 'Verifying MobiCoder Agent...',
+        message: 'Verifying OpenClaw...',
       ));
-      await NativeBridge.runInProot('mobicoder-agent --version || echo agent_installed');
+      await NativeBridge.runInProot('openclaw --version || openclaw health || echo openclaw_installed');
       onProgress(const SetupState(
         step: SetupStep.installingAgent,
         progress: 1.0,
-        message: 'MobiCoder Agent installed',
+        message: 'OpenClaw installed',
       ));
 
       // Step 5: Bionic Bypass already installed (before node verification)
