@@ -152,7 +152,7 @@ class _SplashScreenState extends State<SplashScreen>
             if (!agentOk && nodeOk) {
               setState(() => _status = 'Reinstalling MobiCoder Agent...');
               try {
-                const wrapper = '/root/.openclaw/node-wrapper.js';
+                const wrapper = '/root/.mobicoder/node-wrapper.js';
                 const nodeRun = 'node $wrapper';
                 const npmCli = '/usr/local/lib/node_modules/npm/bin/npm-cli.js';
                 await NativeBridge.runInProot(

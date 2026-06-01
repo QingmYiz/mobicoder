@@ -353,11 +353,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _exportSnapshot() async {
     try {
-      final openclawJson = await NativeBridge.readRootfsFile('root/.openclaw/openclaw.json');
+      final mobicoderJson = await NativeBridge.readRootfsFile('root/.mobicoder/mobicoder.json');
       final snapshot = {
         'version': AppConstants.version,
         'timestamp': DateTime.now().toIso8601String(),
-        'openclawConfig': openclawJson,
+        'mobicoderConfig': mobicoderJson,
         'dashboardUrl': _prefs.dashboardUrl,
         'autoStart': _prefs.autoStartGateway,
         'nodeEnabled': _prefs.nodeEnabled,
@@ -399,10 +399,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final content = await file.readAsString();
       final snapshot = jsonDecode(content) as Map<String, dynamic>;
 
-      // Restore openclaw.json into rootfs
-      final openclawConfig = snapshot['openclawConfig'] as String?;
-      if (openclawConfig != null) {
-        await NativeBridge.writeRootfsFile('root/.openclaw/openclaw.json', openclawConfig);
+      // Restore mobicoder.json into rootfs
+      final mobicoderConfig = (snapshot['mobicoderConfig'] ?? snapshot['openclawConfig']) as String?;
+      if (mobicoderConfig != null) {
+        await NativeBridge.writeRootfsFile('root/.mobicoder/mobicoder.json', mobicoderConfig);
       }
 
       // Restore preferences

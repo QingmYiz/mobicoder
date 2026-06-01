@@ -157,22 +157,22 @@ class NodeService {
       }
     }
 
-    // 3. Read directly from openclaw.json — the source of truth (#94).
+    // 3. Read directly from mobicoder.json — the source of truth (#94).
     // This catches the case where dashboardUrl was cleared before a gateway
     // restart (GatewayService.start() nulls it out) but the config file still
     // holds the authoritative token, preventing token_missing reconnect loops.
     try {
-      final raw = await NativeBridge.readRootfsFile('root/.openclaw/openclaw.json');
+      final raw = await NativeBridge.readRootfsFile('root/.mobicoder/mobicoder.json');
       if (raw != null) {
         final config = jsonDecode(raw) as Map<String, dynamic>;
         final token = config['gateway']?['auth']?['token'];
         if (token is String && token.isNotEmpty) {
-          _log('[NODE] Gateway token read from openclaw.json config');
+          _log('[NODE] Gateway token read from mobicoder.json config');
           return token;
         }
       }
     } catch (e) {
-      _log('[NODE] Could not read token from openclaw.json: $e');
+      _log('[NODE] Could not read token from mobicoder.json: $e');
     }
 
     _log('[NODE] No gateway token available');
