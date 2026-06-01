@@ -13,7 +13,7 @@ class ProviderConfigService {
 
   /// Read the current config and return a map with:
   /// - `activeModel`: the current primary model string (or null)
-  /// - `providers`: Map<providerId, {apiKey, model}> for configured providers
+  /// - `providers`: Map<providerId, {apiKey, baseUrl, models}> for configured providers
   static Future<Map<String, dynamic>> readConfig() async {
     try {
       final content = await NativeBridge.readRootfsFile(_configPath);
@@ -59,11 +59,12 @@ class ProviderConfigService {
   static Future<void> saveProviderConfig({
     required AiProvider provider,
     required String apiKey,
+    required String baseUrl,
     required String model,
   }) async {
     final providerIdJson = jsonEncode(provider.id);
     final apiKeyJson = jsonEncode(apiKey);
-    final baseUrlJson = jsonEncode(provider.baseUrl);
+    final baseUrlJson = jsonEncode(baseUrl);
     final modelJson = jsonEncode(model);
 
     // Build the provider object with the model as an object containing `id`,
@@ -100,7 +101,7 @@ fs.writeFileSync(p, JSON.stringify(c, null, 2));
       await _saveConfigDirect(
         providerId: provider.id,
         apiKey: apiKey,
-        baseUrl: provider.baseUrl,
+        baseUrl: baseUrl,
         model: model,
       );
     }

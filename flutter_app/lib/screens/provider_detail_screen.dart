@@ -7,12 +7,14 @@ import '../services/provider_config_service.dart';
 class ProviderDetailScreen extends StatefulWidget {
   final AiProvider provider;
   final String? existingApiKey;
+  final String? existingBaseUrl;
   final String? existingModel;
 
   const ProviderDetailScreen({
     super.key,
     required this.provider,
     this.existingApiKey,
+    this.existingBaseUrl,
     this.existingModel,
   });
 
@@ -24,6 +26,7 @@ class _ProviderDetailScreenState extends State<ProviderDetailScreen> {
   static const _customModelSentinel = '__custom__';
 
   late final TextEditingController _apiKeyController;
+  late final TextEditingController _baseUrlController;
   late final TextEditingController _customModelController;
   late String _selectedModel;
   bool _isCustomModel = false;
@@ -41,6 +44,9 @@ class _ProviderDetailScreenState extends State<ProviderDetailScreen> {
   void initState() {
     super.initState();
     _apiKeyController = TextEditingController(text: widget.existingApiKey ?? '');
+    _baseUrlController = TextEditingController(
+      text: widget.existingBaseUrl ?? widget.provider.baseUrl,
+    );
     _customModelController = TextEditingController();
 
     final existing = widget.existingModel ?? widget.provider.defaultModels.first;
@@ -57,6 +63,7 @@ class _ProviderDetailScreenState extends State<ProviderDetailScreen> {
   @override
   void dispose() {
     _apiKeyController.dispose();
+    _baseUrlController.dispose();
     _customModelController.dispose();
     super.dispose();
   }
@@ -65,14 +72,27 @@ class _ProviderDetailScreenState extends State<ProviderDetailScreen> {
     final apiKey = _apiKeyController.text.trim();
     if (apiKey.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('API key cannot be empty')),
+        const SnackBar(content: Text('API Key 不能为空')),
       );
       return;
     }
+
+    final baseUrl = _baseUrlController.text.trim();
+    final uri = Uri.tryParse(baseUrl);
+    if (baseUrl.isEmpty ||
+        uri == null ||
+        (uri.scheme != 'http' && uri.scheme != 'https') ||
+        uri.host.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('接口地址必须是有效的 http:// 或 https:// 地址')),
+      );
+      return;
+    }
+
     final model = _effectiveModel;
     if (model.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Model name cannot be empty')),
+        const SnackBar(content: Text('模型名称不能为空')),
       );
       return;
     }
@@ -82,18 +102,19 @@ class _ProviderDetailScreenState extends State<ProviderDetailScreen> {
       await ProviderConfigService.saveProviderConfig(
         provider: widget.provider,
         apiKey: apiKey,
+        baseUrl: baseUrl,
         model: model,
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${widget.provider.name} configured and activated')),
+          SnackBar(content: Text('${widget.provider.name} 已保存并启用')),
         );
         Navigator.of(context).pop(true);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save: $e')),
+          SnackBar(content: Text('保存失败：$e')),
         );
       }
     } finally {
@@ -105,16 +126,16 @@ class _ProviderDetailScreenState extends State<ProviderDetailScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Remove ${widget.provider.name}?'),
-        content: const Text('This will delete the API key and deactivate the model.'),
+        title: Text('移除 ${widget.provider.name}？'),
+        content: const Text('这会删除 API Key，并停用当前模型配置。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: const Text('取消'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Remove'),
+            child: const Text('移除'),
           ),
         ],
       ),
@@ -127,14 +148,14 @@ class _ProviderDetailScreenState extends State<ProviderDetailScreen> {
       await ProviderConfigService.removeProviderConfig(provider: widget.provider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${widget.provider.name} removed')),
+          SnackBar(content: Text('${widget.provider.name} 已移除')),
         );
         Navigator.of(context).pop(true);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to remove: $e')),
+          SnackBar(content: Text('移除失败：$e')),
         );
       }
     } finally {
@@ -214,9 +235,25 @@ class _ProviderDetailScreenState extends State<ProviderDetailScreen> {
           ),
           const SizedBox(height: 24),
 
+          // Base URL
+          Text(
+            '接口地址 / Base URL',
+            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _baseUrlController,
+            keyboardType: TextInputType.url,
+            decoration: InputDecoration(
+              hintText: widget.provider.baseUrl,
+              helperText: '支持 OpenAI / NewAPI 兼容地址，例如 https://api.example.com/v1',
+            ),
+          ),
+          const SizedBox(height: 24),
+
           // Model selection
           Text(
-            'Model',
+            '模型',
             style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 8),
@@ -229,7 +266,7 @@ class _ProviderDetailScreenState extends State<ProviderDetailScreen> {
                   .map((m) => DropdownMenuItem(value: m, child: Text(m))),
               const DropdownMenuItem(
                 value: _customModelSentinel,
-                child: Text('Custom...'),
+                child: Text('自定义模型...'),
               ),
             ],
             onChanged: (value) {
@@ -246,8 +283,8 @@ class _ProviderDetailScreenState extends State<ProviderDetailScreen> {
             TextField(
               controller: _customModelController,
               decoration: const InputDecoration(
-                hintText: 'e.g. meta/llama-3.3-70b-instruct',
-                labelText: 'Custom model name',
+                hintText: '例如 meta/llama-3.3-70b-instruct',
+                labelText: '自定义模型名称',
               ),
             ),
           ],
@@ -262,7 +299,7 @@ class _ProviderDetailScreenState extends State<ProviderDetailScreen> {
                     width: 20,
                     child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                   )
-                : const Text('Save & Activate'),
+                : const Text('保存并启用'),
           ),
           if (_isConfigured) ...[
             const SizedBox(height: 12),
@@ -274,7 +311,7 @@ class _ProviderDetailScreenState extends State<ProviderDetailScreen> {
                       width: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Remove Configuration'),
+                  : const Text('移除配置'),
             ),
           ],
         ],

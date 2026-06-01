@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../app.dart';
 import '../constants.dart';
+import '../services/native_bridge.dart';
 
 class AgentScreen extends StatefulWidget {
   final String? projectName;
@@ -21,6 +23,7 @@ class _AgentScreenState extends State<AgentScreen> {
   final _scrollController = ScrollController();
   WebSocketChannel? _channel;
   bool _connected = false;
+  bool _connecting = false;
   bool _busy = false;
   String? _error;
 
@@ -44,14 +47,49 @@ class _AgentScreenState extends State<AgentScreen> {
     });
   }
 
-  void _connect() {
+  Future<bool> _waitForAgentReady() async {
+    for (var i = 0; i < 30; i++) {
+      try {
+        final response = await http
+            .get(Uri.parse('${AppConstants.agentUrl}/api/health'))
+            .timeout(const Duration(seconds: 2));
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          return true;
+        }
+      } catch (_) {}
+      await Future.delayed(const Duration(seconds: 1));
+    }
+    return false;
+  }
+
+  Future<void> _connect() async {
+    if (_connecting || _connected) return;
+    setState(() {
+      _connecting = true;
+      _error = null;
+    });
+
     try {
+      await NativeBridge.setupDirs();
+      await NativeBridge.writeResolv();
+      await NativeBridge.startAgent();
+
+      final ready = await _waitForAgentReady();
+      if (!ready) {
+        throw Exception('Agent 服务启动超时，请检查初始化是否完成或查看后台日志');
+      }
+
       final wsUrl = AppConstants.agentUrl
           .replaceFirst('http://', 'ws://')
           .replaceFirst('https://', 'wss://');
       _channel = WebSocketChannel.connect(Uri.parse('$wsUrl/api/agent'));
 
-      setState(() => _connected = true);
+      if (mounted) {
+        setState(() {
+          _connected = true;
+          _connecting = false;
+        });
+      }
 
       _channel!.stream.listen(
         (data) {
@@ -104,24 +142,31 @@ class _AgentScreenState extends State<AgentScreen> {
           } catch (_) {}
         },
         onError: (e) {
+          if (!mounted) return;
           setState(() {
             _error = '连接错误：$e';
             _connected = false;
+            _connecting = false;
             _busy = false;
           });
         },
         onDone: () {
+          if (!mounted) return;
           setState(() {
             _connected = false;
+            _connecting = false;
             _busy = false;
           });
         },
       );
     } catch (e) {
-      setState(() {
-        _error = '连接失败：$e';
-        _connected = false;
-      });
+      if (mounted) {
+        setState(() {
+          _error = '连接失败：$e';
+          _connected = false;
+          _connecting = false;
+        });
+      }
     }
   }
 
@@ -170,8 +215,8 @@ class _AgentScreenState extends State<AgentScreen> {
         actions: [
           if (!_connected)
             TextButton(
-              onPressed: _connect,
-              child: const Text('连接'),
+              onPressed: _connecting ? null : _connect,
+              child: Text(_connecting ? '启动中' : '连接'),
             )
           else
             Container(
@@ -227,10 +272,12 @@ class _AgentScreenState extends State<AgentScreen> {
                     ),
                   ),
                   TextButton(
-                    onPressed: () {
-                      setState(() => _error = null);
-                      _connect();
-                    },
+                    onPressed: _connecting
+                        ? null
+                        : () {
+                            setState(() => _error = null);
+                            _connect();
+                          },
                     child: const Text('重试'),
                   ),
                 ],
@@ -268,9 +315,15 @@ class _AgentScreenState extends State<AgentScreen> {
                     ),
                     const SizedBox(height: 24),
                     FilledButton.icon(
-                      onPressed: _connect,
-                      icon: const Icon(Icons.power),
-                      label: const Text('连接 Agent'),
+                      onPressed: _connecting ? null : _connect,
+                      icon: _connecting
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.power),
+                      label: Text(_connecting ? '正在启动 Agent...' : '连接 Agent'),
                     ),
                   ],
                 ),

@@ -34,6 +34,20 @@ class _ProvidersScreenState extends State<ProvidersScreen> {
     }
   }
 
+  String? _configuredModel(Map<String, dynamic>? providerConfig) {
+    final models = providerConfig?['models'];
+    if (models is List && models.isNotEmpty) {
+      final first = models.first;
+      if (first is Map && first['id'] is String) {
+        return first['id'] as String;
+      }
+      if (first is String) {
+        return first;
+      }
+    }
+    return null;
+  }
+
   Future<void> _openProvider(AiProvider provider) async {
     final providerConfig = _providers[provider.id] as Map<String, dynamic>?;
     final result = await Navigator.of(context).push<bool>(
@@ -41,7 +55,8 @@ class _ProvidersScreenState extends State<ProvidersScreen> {
         builder: (_) => ProviderDetailScreen(
           provider: provider,
           existingApiKey: providerConfig?['apiKey'] as String?,
-          existingModel: _activeModel,
+          existingBaseUrl: providerConfig?['baseUrl'] as String?,
+          existingModel: _configuredModel(providerConfig),
         ),
       ),
     );
@@ -51,13 +66,12 @@ class _ProvidersScreenState extends State<ProvidersScreen> {
   }
 
   String _statusLabel(AiProvider provider) {
-    final isConfigured = _providers.containsKey(provider.id);
-    if (!isConfigured) return '';
-    // Check if the active model belongs to this provider
-    if (_activeModel != null) {
-      final isActive = provider.defaultModels.any((m) => _activeModel!.contains(m)) ||
-          _activeModel!.contains(provider.id);
-      if (isActive) return '使用中';
+    final providerConfig = _providers[provider.id] as Map<String, dynamic>?;
+    if (providerConfig == null) return '';
+
+    final configuredModel = _configuredModel(providerConfig);
+    if (_activeModel != null && configuredModel == _activeModel) {
+      return '使用中';
     }
     return '已配置';
   }
