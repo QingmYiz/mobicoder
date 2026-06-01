@@ -11,6 +11,7 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.InputStream
 import java.util.zip.GZIPInputStream
+import java.util.zip.ZipInputStream
 import org.apache.commons.compress.archivers.ar.ArArchiveInputStream
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
@@ -795,17 +796,40 @@ class BootstrapManager(
     }
 
     fun copyAgentServerToRootfs() {
-        val appFlutterDir = File(filesDir).parentFile
-        val source = File(appFlutterDir, "agent-server")
-        if (!source.exists() || !File(source, "package.json").exists()) {
-            throw RuntimeException("agent-server source not found: ${source.absolutePath}")
-        }
-
         val target = File("$rootfsDir/mobicoder-agent")
         if (target.exists()) {
             deleteRecursively(target)
         }
-        copyDirectory(source, target)
+        target.mkdirs()
+
+        context.assets.open("flutter_assets/assets/agent-server.zip").use { input ->
+            ZipInputStream(BufferedInputStream(input)).use { zip ->
+                var entry = zip.nextEntry
+                while (entry != null) {
+                    val outFile = File(target, entry.name)
+                    if (entry.isDirectory) {
+                        outFile.mkdirs()
+                    } else {
+                        outFile.parentFile?.mkdirs()
+                        FileOutputStream(outFile).use { fos ->
+                            zip.copyTo(fos)
+                        }
+                        outFile.setReadable(true, false)
+                        outFile.setWritable(true, false)
+                        if (outFile.extension in listOf("sh", "js")) {
+                            outFile.setExecutable(true, false)
+                        }
+                    }
+                    zip.closeEntry()
+                    entry = zip.nextEntry
+                }
+            }
+        }
+
+        val pkgJson = File(target, "package.json")
+        if (!pkgJson.exists()) {
+            throw RuntimeException("agent-server package.json missing after asset extraction")
+        }
     }
 
     private fun copyDirectory(source: File, target: File) {
