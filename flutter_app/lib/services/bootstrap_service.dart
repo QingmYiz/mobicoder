@@ -259,8 +259,10 @@ class BootstrapService {
         progress: 0.0,
         message: 'Installing MobiCoder Agent Server...',
       ));
-      // Install mobicoder-agent — fork/exec works now with our Termux-matching proot.
-      // The agent-server/ directory is copied into the proot environment during setup.
+      // Install mobicoder-agent from the bundled agent-server source copied
+      // into the rootfs. Installing from npm registry is not enough because
+      // this app ships a local modified server implementation.
+      await NativeBridge.copyAgentServerToRootfs();
       await NativeBridge.runInProot(
         '$nodeRun $npmCli install -g /mobicoder-agent',
         timeout: 1800,

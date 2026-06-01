@@ -163,6 +163,10 @@ class NativeBridge {
     return await _channel.invokeMethod('writeRootfsFile', {'path': path, 'content': content});
   }
 
+  static Future<bool> copyAgentServerToRootfs() async {
+    return await _channel.invokeMethod('copyAgentServerToRootfs');
+  }
+
   // SSH Service
   static Future<bool> startSshd({int port = 8022}) async {
     return await _channel.invokeMethod('startSshd', {'port': port});

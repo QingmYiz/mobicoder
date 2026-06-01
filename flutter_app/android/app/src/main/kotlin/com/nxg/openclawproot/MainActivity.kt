@@ -358,6 +358,16 @@ class MainActivity : FlutterActivity() {
                         result.error("INVALID_ARGS", "packageName required", null)
                     }
                 }
+                "copyAgentServerToRootfs" -> {
+                    Thread {
+                        try {
+                            bootstrapManager.copyAgentServerToRootfs()
+                            runOnUiThread { result.success(true) }
+                        } catch (e: Exception) {
+                            runOnUiThread { result.error("AGENT_COPY_ERROR", e.message, null) }
+                        }
+                    }.start()
+                }
                 "startSetupService" -> {
                     try {
                         SetupService.start(applicationContext)

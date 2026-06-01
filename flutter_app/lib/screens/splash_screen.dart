@@ -155,8 +155,9 @@ class _SplashScreenState extends State<SplashScreen>
                 const wrapper = '/root/.mobicoder/node-wrapper.js';
                 const nodeRun = 'node $wrapper';
                 const npmCli = '/usr/local/lib/node_modules/npm/bin/npm-cli.js';
+                await NativeBridge.copyAgentServerToRootfs();
                 await NativeBridge.runInProot(
-                  '$nodeRun $npmCli install -g mobicoder-agent',
+                  '$nodeRun $npmCli install -g /mobicoder-agent',
                   timeout: 1800,
                 );
                 await NativeBridge.createBinWrappers('mobicoder-agent');

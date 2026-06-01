@@ -794,6 +794,37 @@ class BootstrapManager(
         }
     }
 
+    fun copyAgentServerToRootfs() {
+        val appFlutterDir = File(filesDir).parentFile
+        val source = File(appFlutterDir, "agent-server")
+        if (!source.exists() || !File(source, "package.json").exists()) {
+            throw RuntimeException("agent-server source not found: ${source.absolutePath}")
+        }
+
+        val target = File("$rootfsDir/mobicoder-agent")
+        if (target.exists()) {
+            deleteRecursively(target)
+        }
+        copyDirectory(source, target)
+    }
+
+    private fun copyDirectory(source: File, target: File) {
+        if (source.isDirectory) {
+            target.mkdirs()
+            source.listFiles()?.forEach { child ->
+                copyDirectory(child, File(target, child.name))
+            }
+        } else {
+            target.parentFile?.mkdirs()
+            source.copyTo(target, overwrite = true)
+            target.setReadable(true, false)
+            target.setWritable(true, false)
+            if (source.canExecute() || source.extension in listOf("sh", "js")) {
+                target.setExecutable(true, false)
+            }
+        }
+    }
+
     private fun deleteRecursively(file: File) {
         // CRITICAL: Do NOT follow symlinks — the rootfs contains symlinks
         // to /storage/emulated/0 (sdcard). Following them would delete the
